@@ -5,7 +5,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#define ALIGN(s) (((s) + 3 ) & ~3)
+#define M sizeof(int)
+#define ALIGN(s) (((s) + M-1 ) & ~(M-1))
 
 struct ringbuffer {
 	int size;
