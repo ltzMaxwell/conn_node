@@ -92,7 +92,6 @@ _alloc(struct ringbuffer * rb, int total_size , int size) {
 }
 
 
-
 //ring buffer alloc
 struct ringbuffer_block *
 ringbuffer_alloc(struct ringbuffer * rb, int size) {
