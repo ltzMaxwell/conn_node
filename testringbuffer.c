@@ -29,16 +29,16 @@ dump(struct ringbuffer * rb, struct ringbuffer_block *blk, int size) {
 static void
 test(struct ringbuffer *rb) {
 	struct ringbuffer_block * blk;
-//	blk = ringbuffer_alloc(rb,48);
-//	blk->id = 0;
-//	ringbuffer_free(rb,blk);
-//	blk = ringbuffer_alloc(rb,48);
-//	blk->id = 1;
-//	ringbuffer_free(rb,blk);
-//
-//	blk = ringbuffer_alloc(rb,80);
-//	blk->id = 0;
-//	ringbuffer_free(rb,blk);
+	blk = ringbuffer_alloc(rb,48);
+	blk->id = 0;
+	ringbuffer_free(rb,blk);
+	blk = ringbuffer_alloc(rb,48);
+	blk->id = 1;
+	ringbuffer_free(rb,blk);
+
+	blk = ringbuffer_alloc(rb,80);
+	blk->id = 0;
+	ringbuffer_free(rb,blk);
 
 
 	blk = ringbuffer_alloc(rb,50);
