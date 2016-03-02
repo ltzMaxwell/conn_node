@@ -21,7 +21,7 @@ block_offset(struct ringbuffer * rb, struct ringbuffer_block * blk) {
 
 static inline struct ringbuffer_block *
 block_ptr(struct ringbuffer * rb, int offset) {
-	char * start = (char *)(rb + 1);                                   //+1 to differ full and empty
+	char * start = (char *)(rb + 1);                                   //jump over struct its self , to data seg [struct_self-data]
 	return (struct ringbuffer_block *)(start + offset);
 }
 
@@ -55,10 +55,13 @@ ringbuffer_delete(struct ringbuffer * rb) {
 
 void
 ringbuffer_link(struct ringbuffer *rb , struct ringbuffer_block * head, struct ringbuffer_block * next) {
-	while (head->next >=0) {
+	//head blk already have a next blk, shift to this "next blk"
+    while (head->next >=0) {
 		head = block_ptr(rb, head->next);
 	}
+	//set 2 block of same id
 	next->id = head->id;
+    //set blk1 -> next offset of blk2
 	head->next = block_offset(rb, next);
 }
 

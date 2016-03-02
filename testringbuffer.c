@@ -50,6 +50,7 @@ test(struct ringbuffer *rb) {
 
 	blk = ringbuffer_alloc(rb,4);
 	printf("%p\n",blk);
+
 	int id = ringbuffer_collect(rb);
 	printf("collect %d\n",id);
 
