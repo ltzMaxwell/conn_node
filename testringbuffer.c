@@ -29,16 +29,16 @@ dump(struct ringbuffer * rb, struct ringbuffer_block *blk, int size) {
 static void
 test(struct ringbuffer *rb) {
 	struct ringbuffer_block * blk;
-	blk = ringbuffer_alloc(rb,48);
-	blk->id = 0;
-	ringbuffer_free(rb,blk);
-	blk = ringbuffer_alloc(rb,48);
-	blk->id = 1;
-	ringbuffer_free(rb,blk);
-
-	blk = ringbuffer_alloc(rb,80);
-	blk->id = 0;
-	ringbuffer_free(rb,blk);
+//	blk = ringbuffer_alloc(rb,48);
+//	blk->id = 0;
+//	ringbuffer_free(rb,blk);
+//	blk = ringbuffer_alloc(rb,48);
+//	blk->id = 1;
+//	ringbuffer_free(rb,blk);
+//
+//	blk = ringbuffer_alloc(rb,80);
+//	blk->id = 0;
+//	ringbuffer_free(rb,blk);
 
 
 	blk = ringbuffer_alloc(rb,50);
@@ -46,7 +46,7 @@ test(struct ringbuffer *rb) {
 	struct ringbuffer_block * next = ringbuffer_alloc(rb, 40);
 	next->id = 1;
 	ringbuffer_link(rb, blk, next);
-	ringbuffer_dump(rb);
+//	ringbuffer_dump(rb);
 
 	blk = ringbuffer_alloc(rb,4);
 	printf("%p\n",blk);
@@ -66,6 +66,7 @@ test(struct ringbuffer *rb) {
 	init(next,6);
 	ringbuffer_link(rb, blk , next);
 
+    ringbuffer_dump(rb);
 
 	dump(rb, blk , 3);
 	dump(rb, blk , 6);

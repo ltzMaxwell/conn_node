@@ -6,7 +6,7 @@ struct ringbuffer;
 //  length id       next   data
 struct ringbuffer_block {
 	int length;
-	int offset;
+	int offset;		//未处理的数据块头部偏移
 	int id;
 	int next;
 };

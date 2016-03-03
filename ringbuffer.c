@@ -40,6 +40,9 @@ block_next(struct ringbuffer * rb, struct ringbuffer_block * blk) {
 struct ringbuffer *
 ringbuffer_new(int size) {
 	struct ringbuffer * rb = malloc(sizeof(*rb) + size);
+
+    printf("size of init rb is %d \n", sizeof(*rb));
+
 	rb->size = size;
 	rb->head = 0;
 	struct ringbuffer_block * blk = block_ptr(rb, 0);   //get address of memory
@@ -74,7 +77,7 @@ _alloc(struct ringbuffer * rb, int total_size , int size) {
 	int align_length = ALIGN(sizeof(struct ringbuffer_block) + size);
     //set real length
 	blk->length = sizeof(struct ringbuffer_block) + size;     //blk real size ,no align
-	blk->offset = 0;
+	blk->offset = 0;                                          //set length with no align ,cause padding space no need to read
 	blk->next = -1;
 	blk->id = -1;
     //get next blk
@@ -193,6 +196,7 @@ ringbuffer_free(struct ringbuffer * rb, struct ringbuffer_block * blk) {
 	}
 }
 
+//todo ? skip is used to jump over given bytes?
 int
 ringbuffer_data(struct ringbuffer * rb, struct ringbuffer_block * blk, int size, int skip, void **ptr) {
 	int length = blk->length - sizeof(struct ringbuffer_block) - blk->offset;
@@ -203,6 +207,7 @@ ringbuffer_data(struct ringbuffer * rb, struct ringbuffer_block * blk, int size,
 				*ptr = (start + blk->offset + skip);
 				return size;
 			}
+            //set address to read to NULL
 			*ptr = NULL;
 			int ret = length - skip;
 			while (blk->next >= 0) {
@@ -257,12 +262,13 @@ ringbuffer_copy(struct ringbuffer * rb, struct ringbuffer_block * from, int skip
 	}
 }
 
+//get a blk needed ,with skip param
 struct ringbuffer_block *
 ringbuffer_yield(struct ringbuffer * rb, struct ringbuffer_block *blk, int skip) {
-	int length = blk->length - sizeof(struct ringbuffer_block) - blk->offset;
+	int length = blk->length - sizeof(struct ringbuffer_block) - blk->offset;       //-offset 意思是处理未处理的数据,offset是未处理的数据起始点
 	for (;;) {
 		if (length > skip) {
-			blk->offset += skip;
+			blk->offset += skip;    //shift offset by skip ,skip means no need to process
 			return blk;
 		}
 		blk->id = -1;
@@ -271,7 +277,7 @@ ringbuffer_yield(struct ringbuffer * rb, struct ringbuffer_block *blk, int skip)
 		}
 		blk = block_ptr(rb, blk->next);
 		assert(blk->offset == 0);
-		skip -= length;
+		skip -= length;     //re calculate skip, skip is consumed partly by last blk
 		length = blk->length - sizeof(struct ringbuffer_block);
 	}
 }
