@@ -230,35 +230,37 @@ ringbuffer_data(struct ringbuffer * rb, struct ringbuffer_block * blk, int size,
 	}
 }
 
+
 void *
 ringbuffer_copy(struct ringbuffer * rb, struct ringbuffer_block * from, int skip, struct ringbuffer_block * to) {
-	int size = to->length - sizeof(struct ringbuffer_block);
+
+    int size = to->length - sizeof(struct ringbuffer_block);
 	int length = from->length - sizeof(struct ringbuffer_block) - from->offset;
 	char * ptr = (char *)(to+1);
 	for (;;) {
-		if (length > skip) {
+		if (length > skip) {    //data length bigger than skip ,need to copy
 			char * src = (char *)(from + 1);
 			src += from->offset + skip;
-			length -= skip;
-			while (length < size) {
+			length -= skip;         //length of data to copy
+			while (length < size) {     //if small than size, pull from its next blk
 				memcpy(ptr, src, length);
-				assert(from->next >= 0);
+				assert(from->next >= 0);    //has a next blk
 				from = block_ptr(rb , from->next);
-				assert(from->offset == 0);
-				ptr += length;
-				size -= length;
-				length = from->length - sizeof(struct ringbuffer_block);
+				assert(from->offset == 0);  //if offset not 0 ,means this blk has data to be handle
+				ptr += length;      //shift dest address
+				size -= length;     //re calculate size to copy
+				length = from->length - sizeof(struct ringbuffer_block);    //data length of blk
 				src =  (char *)(from + 1);
 			}
-			memcpy(ptr, src , size);
-			to->id = from->id;
-			return (char *)(to + 1);
+			memcpy(ptr, src , size);    //if data length is enough ,do copy
+			to->id = from->id;      //copy id
+			return (char *)(to + 1);        //return dest
 		}
-		assert(from->next >= 0);
+		assert(from->next >= 0);        //if length is not enough to skip ,shift to next blk ,skip the left num
 		from = block_ptr(rb, from->next);
 		assert(from->offset == 0);
-		skip -= length;
-		length = from->length - sizeof(struct ringbuffer_block);
+		skip -= length;     //remaind skip
+		length = from->length - sizeof(struct ringbuffer_block);        //get a new length of a new blk ,restart
 	}
 }
 
