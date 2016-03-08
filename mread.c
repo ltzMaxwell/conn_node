@@ -103,9 +103,9 @@ _create_sockets(int max) {
 	s[max-1].fd = -1;                 //todo  ?
 
     int j;
-//    for(j=0;j<max;j++){
-//        printf("fd of s [%d] is %d \n",j,s[j].fd);
-//    }
+    for(j=0;j<max;j++){
+        printf("fd of s [%d] is %d \n",j,s[j].fd);
+    }
 
 	return s;
 }
@@ -198,16 +198,16 @@ mread_create(int port , int max , int buffer_size) {
 		return NULL;
 	}
 #elif HAVE_KQUEUE
-	int kqueue_fd = kqueue();
+	int kqueue_fd = kqueue();	//init kqueue
 	if (kqueue_fd == -1) {
 		close(listen_fd);
 		return NULL;
 	}
 
-	struct kevent ke;
-	EV_SET(&ke, listen_fd, EVFILT_READ, EV_ADD, 0, 0, LISTENSOCKET);
+	struct kevent ke;	//init kevent
+	EV_SET(&ke, listen_fd, EVFILT_READ, EV_ADD, 0, 0, LISTENSOCKET);	//initializing a kevent structure
 
-    //first register, register change , no event
+    //first register, register change to triger , no event
 	if (kevent(kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {
 		close(listen_fd);
 		close(kqueue_fd);
@@ -287,7 +287,7 @@ _read_queue(struct mread_pool * self, int timeout) {
 	timeoutspec.tv_sec = timeout / 1000;
 	timeoutspec.tv_nsec = (timeout % 1000) * 1000000;
 
-    //second register , just register event , change registerd above
+    //second register , just register event , change registered above
 	int n = kevent(self->kqueue_fd, NULL, 0, self->ev, READQUEUE, &timeoutspec);
 #endif
 	if (n == -1) {
@@ -302,7 +302,7 @@ _read_queue(struct mread_pool * self, int timeout) {
 inline static struct socket *
 _read_one(struct mread_pool * self) {
 
-	if (self->queue_head >= self->queue_len) {             //head should not over len int normal queue
+	if (self->queue_head >= self->queue_len) {             // queue is empty or reach the end, todo, will head exceed len?
 		return NULL;
 	}
 #ifdef HAVE_EPOLL
@@ -332,13 +332,13 @@ _alloc_socket(struct mread_pool * self) {
 	if (next_free < 0 ) {
 		self->free_socket = NULL;
 	} else {
-		self->free_socket = &self->sockets[next_free];     //shift free socket
+		self->free_socket = &self->sockets[next_free];     //shift free socket to next one
 	}
 
 	return s;
 }
 
-//add client, align fd to a free socket,which is a struct
+//add client, assign fd to a free socket,which is a struct
 static void
 _add_client(struct mread_pool * self, int fd) {
 
@@ -362,7 +362,7 @@ _add_client(struct mread_pool * self, int fd) {
 #elif HAVE_KQUEUE
 	struct kevent ke;
 	EV_SET(&ke, fd, EVFILT_READ, EV_ADD, 0, 0, s);
-	if (kevent(self->kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {        //register event for socket read
+	if (kevent(self->kqueue_fd, &ke, 1, NULL, 0, NULL) == -1) {        //register change for socket
 		close(fd);
 		return;
 	}
@@ -377,8 +377,8 @@ static int
 _report_closed(struct mread_pool * self) {
 	int i;
 	for (i=0;i<self->max_connection;i++) {
-		if (self->sockets[i].status == SOCKET_CLOSED) {
-			self->active = i;
+		if (self->sockets[i].status == SOCKET_CLOSED) {     //find a closed socket
+			self->active = i;   //return its index
 			return i;
 		}
 	}
@@ -387,7 +387,7 @@ _report_closed(struct mread_pool * self) {
 }
 
 
-//poll event
+//poll event ,get socket id
 int
 mread_poll(struct mread_pool * self , int timeout) {
 
@@ -416,6 +416,8 @@ mread_poll(struct mread_pool * self , int timeout) {
 			return -1;
 		}
 	}
+
+	//start polling
 	for (;;) {
 
 //        printf("in loop \n");
@@ -425,7 +427,7 @@ mread_poll(struct mread_pool * self , int timeout) {
 			self->active = -1;
 			return -1;
 		}
-		if (s == LISTENSOCKET) {
+		if (s == LISTENSOCKET) {    //new socket conn
 
             printf("LISTENSOCKET \n");
 
@@ -440,7 +442,7 @@ mread_poll(struct mread_pool * self , int timeout) {
 				printf("MREAD connect %s:%u (fd=%d)\n",inet_ntoa(remote_addr.sin_addr),ntohs(remote_addr.sin_port), client_fd);
 				_add_client(self, client_fd);
 			}
-		} else {
+		} else {    //new data
 
             printf("not LISTENSOCKET \n");
 
@@ -524,7 +526,7 @@ mread_pull(struct mread_pool * self , int size) {
 	if (self->active == -1) {
 		return NULL;
 	}
-	struct socket *s = &self->sockets[self->active];       //get current socket
+	struct socket *s = &self->sockets[self->active];       //get current active socket
 
 	int rd_size = size;                                    //read size
 	char * buffer = _ringbuffer_read(self, &rd_size);
@@ -550,7 +552,7 @@ mread_pull(struct mread_pool * self , int size) {
 	}
 
 
-	int sz = size - rd_size;
+	int sz = size - rd_size;	//sz is size to read
 	int rd = READBLOCKSIZE;
 	if (rd < sz) {
 		rd = sz;
@@ -572,12 +574,12 @@ mread_pull(struct mread_pool * self , int size) {
 	buffer = (char *)(blk + 1);
 
 	for (;;) {
-		int bytes = recv(s->fd, buffer, rd, MSG_DONTWAIT);
+		int bytes = recv(s->fd, buffer, rd, MSG_DONTWAIT);	//read bytes
 		if (bytes > 0) {
 			ringbuffer_shrink(rb, blk , bytes);
 			if (bytes < sz) {
 				_link_node(rb, self->active, s , blk);
-				s->status = SOCKET_SUSPEND;
+				s->status = SOCKET_SUSPEND;     //shift status,cuz byte not full 4
 				return NULL;
 			}
 			s->status = SOCKET_READ;
@@ -603,13 +605,17 @@ mread_pull(struct mread_pool * self , int size) {
 			}
 		}
 	}
+
 	_link_node(rb, self->active , s , blk);
+
 	void * ret;
 	int real_rd = ringbuffer_data(rb, s->node , size , self->skip, &ret);
 	if (ret) {
 		self->skip += size;
-		return ret;
+		return ret;     //return data address
 	}
+
+    //ret null, real_rd >0 ,说明外部请求数据块在blk上不连续
 	assert(real_rd == size);
 	struct ringbuffer_block * temp = ringbuffer_alloc(rb, size);
 	while (temp == NULL) {

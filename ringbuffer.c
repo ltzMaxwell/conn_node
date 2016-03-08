@@ -9,10 +9,10 @@
 
 struct ringbuffer {
 	int size;
-	int head;      //head is sum of length of all blk
+	int head;      //head is sum of length of all allocated blk, it's the index
 };
 
-//get start address of given blk
+//get offset of given blk
 static inline int
 block_offset(struct ringbuffer * rb, struct ringbuffer_block * blk) {
 	char * start = (char *)(rb + 1);
@@ -33,7 +33,7 @@ block_next(struct ringbuffer * rb, struct ringbuffer_block * blk) {
 	if (align_length + head == rb->size) {
 		return NULL;
 	}
-	assert(align_length + head < rb->size);
+	assert(align_length + head < rb->size);     //have space to alloc
 	return block_ptr(rb, head + align_length);      //offset of last bulk + length of last bulk
 }
 
@@ -125,6 +125,8 @@ ringbuffer_alloc(struct ringbuffer * rb, int size) {
 	return NULL;
 }
 
+
+//return first id >0
 static int
 _last_id(struct ringbuffer * rb) {
 	int i;
@@ -153,6 +155,8 @@ ringbuffer_collect(struct ringbuffer * rb) {
 	return id;
 }
 
+
+//shrink the bulk to given size ,left space to next blk
 void
 ringbuffer_shrink(struct ringbuffer * rb, struct ringbuffer_block * blk, int size) {
 	if (size == 0) {
@@ -163,6 +167,7 @@ ringbuffer_shrink(struct ringbuffer * rb, struct ringbuffer_block * blk, int siz
 	int old_length = ALIGN(blk->length);
 	assert(align_length <= old_length);
 	blk->length = size + sizeof(struct ringbuffer_block);
+
 	if (align_length == old_length) {
 		return;
 	}
@@ -199,9 +204,10 @@ ringbuffer_free(struct ringbuffer * rb, struct ringbuffer_block * blk) {
 //todo ? skip is used to jump over given bytes?
 int
 ringbuffer_data(struct ringbuffer * rb, struct ringbuffer_block * blk, int size, int skip, void **ptr) {
+
 	int length = blk->length - sizeof(struct ringbuffer_block) - blk->offset;
 	for (;;) {
-		if (length > skip) {
+		if (length > skip) {    //length > skip
 			if (length - skip >= size) {
 				char * start = (char *)(blk + 1);
 				*ptr = (start + blk->offset + skip);
@@ -209,7 +215,7 @@ ringbuffer_data(struct ringbuffer * rb, struct ringbuffer_block * blk, int size,
 			}
             //set address to read to NULL
 			*ptr = NULL;
-			int ret = length - skip;
+			int ret = length - skip;    //if ret < size ,and blk has next , shift to next
 			while (blk->next >= 0) {
 				blk = block_ptr(rb, blk->next);
 				ret += blk->length - sizeof(struct ringbuffer_block);
@@ -219,10 +225,12 @@ ringbuffer_data(struct ringbuffer * rb, struct ringbuffer_block * blk, int size,
 			return ret;
 		}
 		if (blk->next < 0) {
-			assert(length == skip);
+			assert(length == skip);     //length == skip
 			*ptr = NULL;
 			return 0;
 		}
+
+        //length < skip
 		blk = block_ptr(rb, blk->next);
 		assert(blk->offset == 0);
 		skip -= length;

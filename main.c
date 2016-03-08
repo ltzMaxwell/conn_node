@@ -5,9 +5,9 @@
 
 static void
 test(struct mread_pool *m) {
-	int id = mread_poll(m,0);
+	int id = mread_poll(m,0); 	//id of socket
 
-    printf("id is %d \n",id);
+//    printf("id is %d \n",id);
 
 	if (id >= 0) {
 		for (;;) {
